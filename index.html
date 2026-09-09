@@ -1,51 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>CRRSA Queue System</title>
+<title>CRRSA Queue</title>
 
 <style>
-
-*{
-    box-sizing:border-box;
-}
-
 body{
-    margin:0;
     font-family:Arial,sans-serif;
-    background:#f2f6fa;
     text-align:center;
+    background:#f2f5f8;
+    margin:0;
 }
 
-.header{
+header{
     background:#004d99;
     color:white;
-    padding:30px 15px;
+    padding:25px;
 }
 
-.header h1{
+h1{
     margin:0;
-    font-size:32px;
-}
-
-.header p{
-    font-size:20px;
-    margin:10px 0 0;
-}
-
-.language{
-    margin-top:15px;
-}
-
-.language button{
-    padding:10px 20px;
-    margin:5px;
-    border:none;
-    border-radius:6px;
-    cursor:pointer;
 }
 
 .card{
@@ -53,171 +29,123 @@ body{
     width:90%;
     max-width:500px;
     margin:50px auto;
-    padding:40px 20px;
+    padding:30px;
     border-radius:15px;
-    box-shadow:0 4px 15px #bbb;
+    box-shadow:0 4px 15px #aaa;
 }
 
-.card h2{
-    color:#004d99;
-}
-
-.take-button{
+button{
     background:#004d99;
     color:white;
     border:none;
-    padding:20px 40px;
-    font-size:24px;
-    border-radius:10px;
+    padding:18px 30px;
+    margin:10px;
+    border-radius:8px;
+    font-size:20px;
     cursor:pointer;
 }
 
-.take-button:hover{
+button:hover{
     background:#003366;
 }
 
 #number{
-    margin-top:35px;
-    font-size:80px;
+    font-size:60px;
     font-weight:bold;
-    color:#d99a00;
+    color:#004d99;
+    margin:25px;
 }
-
-.info{
-    margin-top:25px;
-    font-size:18px;
-    color:#555;
-}
-
-.footer{
-    margin-top:80px;
-    background:#004d99;
-    color:white;
-    padding:20px;
-}
-
 </style>
-
 </head>
 
 <body>
 
-<div class="header">
-
-    <h1>CRRSA GULELE WOREDA 03</h1>
-
-    <p>
-        Civil Registration & Residency Service
-    </p>
-
-    <div class="language">
-
-        <button onclick="setEnglish()">
-            English
-        </button>
-
-        <button onclick="setAmharic()">
-            አማርኛ
-        </button>
-
-    </div>
-
-</div>
-
+<header>
+    <h1>CRRSA</h1>
+    <p>Queue Management System</p>
+    <p>የተራ አስተዳደር ስርዓት</p>
+</header>
 
 <div class="card">
 
-    <h2 id="title">
-        Take Your Number
-    </h2>
+    <h2>Take Your Number</h2>
+    <h2>ተራ ቁጥር ይውሰዱ</h2>
 
-    <p id="subtitle">
-        የተራ ቁጥር ይውሰዱ
-    </p>
-
-    <button
-        class="take-button"
-        onclick="takeNumber()">
-
-        🎫
-        <span id="buttonText">
-            Take Number
-        </span>
-
+    <button id="takeBtn">
+        TAKE NUMBER<br>
+        ተራ ቁጥር ይውሰዱ
     </button>
 
     <div id="number"></div>
 
-    <div class="info" id="info">
-        Please wait for your number to be called.
-    </div>
-
 </div>
 
 
-<div class="footer">
+<script type="module">
 
-    © 2026 CRRSA Gulele Woreda 03 BY FENTANEH D.
-
-</div>
-
-
-<script>
-
-let nextNumber =
-    Number(localStorage.getItem("nextNumber")) || 1;
+import {
+    db,
+    ref,
+    get,
+    set,
+    runTransaction
+} from "./firebase.js";
 
 
-function takeNumber(){
-
-    let number =
-        "A" + String(nextNumber).padStart(3,"0");
-
-    document.getElementById("number").innerText =
-        number;
-
-    localStorage.setItem(
-        "nextNumber",
-        nextNumber + 1
-    );
-
-    nextNumber++;
-
-}
+const takeBtn = document.getElementById("takeBtn");
+const numberDisplay = document.getElementById("number");
 
 
-function setEnglish(){
+takeBtn.addEventListener("click", async () => {
 
-    document.getElementById("title").innerText =
-        "Take Your Number";
+    try {
 
-    document.getElementById("subtitle").innerText =
-        "Please take your queue number.";
+        const counterRef = ref(db, "queue/lastIssued");
 
-    document.getElementById("buttonText").innerText =
-        "Take Number";
+        const result = await runTransaction(
+            counterRef,
+            current => (current || 0) + 1
+        );
 
-    document.getElementById("info").innerText =
-        "Please wait for your number to be called.";
+        if (!result.committed) {
+            alert("Please try again.");
+            return;
+        }
 
-}
+        const seq = result.snapshot.val();
+
+        const number =
+            "A" + String(seq).padStart(3, "0");
 
 
-function setAmharic(){
+        await set(
+            ref(db, "queue/tickets/" + seq),
+            {
+                number: number,
+                seq: seq,
+                status: "waiting",
+                createdAt: Date.now()
+            }
+        );
 
-    document.getElementById("title").innerText =
-        "የተራ ቁጥር ይውሰዱ";
 
-    document.getElementById("subtitle").innerText =
-        "እባክዎ የተራ ቁጥርዎን ይውሰዱ።";
+        numberDisplay.innerHTML =
+            "Your Number<br>" +
+            number +
+            "<br><small>እርስዎ የወሰዱት ቁጥር</small>";
 
-    document.getElementById("buttonText").innerText =
-        "ተራ ቁጥር ይውሰዱ";
 
-    document.getElementById("info").innerText =
-        "እባክዎ ቁጥርዎ እስኪጠራ ይጠብቁ።";
+    } catch(error) {
 
-}
+        console.error(error);
+
+        alert(
+            "Unable to connect to queue system."
+        );
+
+    }
+
+});
 
 </script>
 
