@@ -12,80 +12,78 @@ content="width=device-width, initial-scale=1.0">
 
 <style>
 
-* {
-    box-sizing: border-box;
+*{
+    box-sizing:border-box;
 }
 
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    text-align: center;
-    background: #f2f5f8;
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    text-align:center;
+    background:#f2f5f8;
 }
 
-header {
-    background: #004d99;
-    color: white;
-    padding: 25px;
+header{
+    background:#004d99;
+    color:white;
+    padding:25px;
 }
 
-header h1 {
-    margin: 0;
-    font-size: 42px;
+header h1{
+    margin:0;
+    font-size:42px;
 }
 
-header h2 {
-    margin: 8px;
+header h2{
+    margin:8px;
 }
 
-.card {
-    background: white;
-    width: 90%;
-    max-width: 700px;
-    margin: 35px auto;
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px #aaa;
+.card{
+    background:white;
+    width:90%;
+    max-width:700px;
+    margin:35px auto;
+    padding:30px;
+    border-radius:15px;
+    box-shadow:0 4px 15px #aaa;
 }
 
-select {
-    padding: 14px;
-    font-size: 20px;
-    margin: 15px;
-    border-radius: 8px;
+#counterTitle{
+    font-size:28px;
+    margin-bottom:20px;
 }
 
-#current {
-    font-size: 90px;
-    font-weight: bold;
-    color: #004d99;
-    margin: 30px;
+#current{
+    font-size:90px;
+    font-weight:bold;
+    color:#004d99;
+    margin:30px;
 }
 
-button {
-    padding: 18px 30px;
-    margin: 8px;
-    border: 0;
-    border-radius: 8px;
-    font-size: 20px;
-    color: white;
-    background: #004d99;
-    cursor: pointer;
+button{
+    padding:18px 30px;
+    margin:8px;
+    border:0;
+    border-radius:8px;
+    font-size:20px;
+    color:white;
+    background:#004d99;
+    cursor:pointer;
 }
 
-button:hover {
-    background: #003366;
+button:hover{
+    background:#003366;
 }
 
-button:disabled {
-    background: #999;
-    cursor: not-allowed;
+button:disabled{
+    background:#999;
+    cursor:not-allowed;
 }
 
-#status {
-    margin: 20px;
-    font-size: 18px;
-    min-height: 30px;
+#status{
+    margin:20px;
+    font-size:20px;
+    min-height:35px;
 }
 
 </style>
@@ -110,28 +108,9 @@ button:disabled {
 <div class="card">
 
 
-<h2>Counter / ቆጣሪ</h2>
-
-
-<select id="counter">
-
-<option value="1">
-Counter 1 / ቆጣሪ 1
-</option>
-
-<option value="2">
-Counter 2 / ቆጣሪ 2
-</option>
-
-<option value="3">
-Counter 3 / ቆጣሪ 3
-</option>
-
-<option value="4">
-Counter 4 / ቆጣሪ 4
-</option>
-
-</select>
+<div id="counterTitle">
+Counter
+</div>
 
 
 <div id="current">
@@ -169,7 +148,11 @@ RESET
 </button>
 
 
-<div id="status"></div>
+<div id="status">
+
+READY / ዝግጁ
+
+</div>
 
 
 </div>
@@ -183,37 +166,58 @@ import {
 
     db,
     ref,
+    get,
+    update,
     onValue,
-    runTransaction,
-    update
+    runTransaction
 
 } from "./firebase.js";
 
 
 
-const counterSelect =
-    document.getElementById("counter");
-
-
 const currentDisplay =
-    document.getElementById("current");
+document.getElementById("current");
 
 
 const statusDisplay =
-    document.getElementById("status");
+document.getElementById("status");
 
 
 const nextBtn =
-    document.getElementById("nextBtn");
+document.getElementById("nextBtn");
 
 
 const recallBtn =
-    document.getElementById("recallBtn");
+document.getElementById("recallBtn");
 
 
 const resetBtn =
-    document.getElementById("resetBtn");
+document.getElementById("resetBtn");
 
+
+
+/* =====================================
+   COUNTER NUMBER
+===================================== */
+
+
+const params =
+new URLSearchParams(window.location.search);
+
+
+let counter =
+params.get("counter") || "1";
+
+
+document.getElementById("counterTitle").innerHTML =
+"Counter " + counter +
+" / ቆጣሪ " + counter;
+
+
+
+/* =====================================
+   LAST CALLED
+===================================== */
 
 
 let lastCalled = "";
@@ -234,224 +238,238 @@ async () => {
 
 
     statusDisplay.innerText =
-        "Calling next customer... / ቀጣዩን ደንበኛ በመጥራት ላይ...";
+    "Calling next customer... / ቀጣዩን ደንበኛ በመጥራት ላይ...";
 
 
-    try {
-
-
-        const counter =
-            counterSelect.value;
+    try{
 
 
         const queueRef =
-            ref(db, "queue");
-
+        ref(db,"queue");
 
 
         const result =
-            await runTransaction(
-                queueRef,
+        await runTransaction(
+        queueRef,
 
-                (queue) => {
 
+        (queue) => {
 
-                    if (!queue) {
 
-                        return;
+            if(!queue){
 
-                    }
+                return;
 
+            }
 
 
-                    const lastIssued =
-                        Number(
-                            queue.lastIssued || 0
-                        );
+            if(!queue.tickets){
 
+                return;
 
+            }
 
-                    let nextToCall =
-                        Number(
-                            queue.nextToCall || 1
-                        );
 
+            const lastIssued =
+            Number(queue.lastIssued || 0);
 
 
-                    if (
-                        !queue.tickets
-                    ) {
+            let nextToCall =
+            Number(queue.nextToCall || 1);
 
-                        return;
 
-                    }
+            /*
+            Find the FIRST waiting ticket
+            */
 
 
+            while(
+                nextToCall <= lastIssued
+            ){
 
-                    /*
-                    ==================================
-                    IMPORTANT FIX
 
-                    Skip every ticket that is already
-                    called and find the next WAITING
-                    ticket automatically.
-                    ==================================
-                    */
+                const ticket =
+                queue.tickets[nextToCall];
 
 
-                    while (
-                        nextToCall <= lastIssued
-                    ) {
+                if(
+                    ticket &&
+                    ticket.status === "waiting"
+                ){
 
-
-                        const ticket =
-                            queue.tickets[
-                                nextToCall
-                            ];
-
-
-
-                        if (
-                            ticket &&
-                            ticket.status === "waiting"
-                        ) {
-
-                            break;
-
-                        }
-
-
-
-                        nextToCall++;
-
-                    }
-
-
-
-                    /*
-                    ==================================
-                    NO WAITING CUSTOMER
-                    ==================================
-                    */
-
-
-                    if (
-                        nextToCall > lastIssued
-                    ) {
-
-                        return;
-
-                    }
-
-
-
-                    const ticket =
-                        queue.tickets[
-                            nextToCall
-                        ];
-
-
-
-                    if (
-                        !ticket
-                    ) {
-
-                        return;
-
-                    }
-
-
-
-                    const now =
-                        Date.now();
-
-
-
-                    /*
-                    ==================================
-                    CALL CUSTOMER
-                    ==================================
-                    */
-
-
-                    ticket.status =
-                        "called";
-
-
-                    ticket.counter =
-                        counter;
-
-
-                    ticket.calledAt =
-                        now;
-
-
-
-                    queue.tickets[
-                        nextToCall
-                    ] = ticket;
-
-
-
-                    /*
-                    ==================================
-                    MOVE POINTER
-                    ==================================
-                    */
-
-
-                    queue.nextToCall =
-                        nextToCall + 1;
-
-
-
-                    /*
-                    ==================================
-                    CURRENT NUMBER
-                    ==================================
-                    */
-
-
-                    queue.current = {
-
-                        number:
-                            ticket.number,
-
-                        counter:
-                            counter,
-
-                        calledAt:
-                            now
-
-                    };
-
-
-
-                    return queue;
+                    break;
 
                 }
-            );
+
+
+                nextToCall++;
+
+            }
+
+
+
+            /*
+            No waiting ticket
+            */
+
+
+            if(
+                nextToCall > lastIssued
+            ){
+
+                return;
+
+            }
+
+
+
+            const ticket =
+            queue.tickets[nextToCall];
+
+
+            if(!ticket){
+
+                return;
+
+            }
+
+
+
+            const now =
+            Date.now();
+
+
+
+            /*
+            CALL TICKET
+            */
+
+
+            ticket.status =
+            "called";
+
+
+            ticket.counter =
+            counter;
+
+
+            ticket.calledAt =
+            now;
+
+
+
+            queue.tickets[nextToCall] =
+            ticket;
+
+
+
+            /*
+            MOVE TO NEXT TICKET
+            */
+
+
+            queue.nextToCall =
+            nextToCall + 1;
+
+
+
+            /*
+            CURRENT NUMBER FOR TV
+            */
+
+
+            queue.current = {
+
+                number:
+                ticket.number,
+
+                counter:
+                counter,
+
+                calledAt:
+                now
+
+            };
+
+
+            return queue;
+
+        });
 
 
 
         /*
-        ==================================
-        TRANSACTION NOT COMMITTED
-        ==================================
+        TRANSACTION FAILED
         */
 
 
-        if (
-            !result.committed
-        ) {
+        if(!result.committed){
 
 
-            statusDisplay.innerText =
-                "No waiting customer / የሚጠብቅ ደንበኛ የለም";
+            const snapshot =
+            await get(queueRef);
 
 
-            nextBtn.disabled =
-                false;
+            const queue =
+            snapshot.val();
+
+
+
+            let waitingFound =
+            false;
+
+
+            if(
+                queue &&
+                queue.tickets
+            ){
+
+
+                const lastIssued =
+                Number(queue.lastIssued || 0);
+
+
+                for(
+                    let i=1;
+                    i<=lastIssued;
+                    i++
+                ){
+
+
+                    const ticket =
+                    queue.tickets[i];
+
+
+                    if(
+                        ticket &&
+                        ticket.status === "waiting"
+                    ){
+
+                        waitingFound =
+                        true;
+
+                        break;
+
+                    }
+
+                }
+
+            }
+
+
+
+            if(waitingFound){
+
+                statusDisplay.innerText =
+                "Please press NEXT again / እባክዎ NEXT እንደገና ይጫኑ";
+
+            }
+            else{
+
+                statusDisplay.innerText =
+                "Queue is empty / ተራው ባዶ ነው";
+
+            }
 
 
             return;
@@ -461,34 +479,26 @@ async () => {
 
 
         /*
-        ==================================
-        GET RESULT
-        ==================================
+        GET CURRENT
         */
 
 
         const queue =
-            result.snapshot.val();
+        result.snapshot.val();
 
 
         const current =
-            queue.current;
+        queue.current;
 
 
 
-        if (
+        if(
             !current ||
             !current.number
-        ) {
-
+        ){
 
             statusDisplay.innerText =
-                "No waiting customer / የሚጠብቅ ደንበኛ የለም";
-
-
-            nextBtn.disabled =
-                false;
-
+            "Queue is empty / ተራው ባዶ ነው";
 
             return;
 
@@ -497,30 +507,25 @@ async () => {
 
 
         /*
-        ==================================
         SHOW NUMBER
-        ==================================
         */
 
 
         currentDisplay.innerText =
-            current.number;
+        current.number;
 
 
         lastCalled =
-            current.number;
+        current.number;
 
 
 
         statusDisplay.innerText =
-            "Called / ተጠርቷል";
-
+        "Called / ተጠርቷል";
 
 
         /*
-        ==================================
         VOICE
-        ==================================
         */
 
 
@@ -542,21 +547,18 @@ async () => {
 
     }
 
-    catch (error) {
-
+    catch(error){
 
         console.error(error);
 
 
         statusDisplay.innerText =
-            "Connection error / የግንኙነት ችግር";
+        "Connection error / የግንኙነት ችግር";
 
     }
 
 
-
-    nextBtn.disabled =
-        false;
+    nextBtn.disabled = false;
 
 });
 
@@ -572,23 +574,16 @@ recallBtn.addEventListener(
 () => {
 
 
-    if (
-        !lastCalled
-    ) {
+    if(!lastCalled){
 
 
         statusDisplay.innerText =
-            "No number to recall / የሚደገም ቁጥር የለም";
+        "No number to recall / የሚደገም ቁጥር የለም";
 
 
         return;
 
     }
-
-
-
-    const counter =
-        counterSelect.value;
 
 
 
@@ -608,9 +603,8 @@ recallBtn.addEventListener(
     );
 
 
-
     statusDisplay.innerText =
-        "Recalled / እንደገና ተጠርቷል";
+    "Recalled / እንደገና ተጠርቷል";
 
 });
 
@@ -627,19 +621,18 @@ async () => {
 
 
     const answer =
-        confirm(
+    confirm(
 
-            "Reset entire queue?\n\n" +
+        "Reset entire queue?\n\n" +
 
-            "የተራ ስርዓቱን ሙሉ በሙሉ " +
+        "የተራ ስርዓቱን ሙሉ በሙሉ " +
 
-            "ዳግም ማስጀመር ይፈልጋሉ?"
+        "ዳግም ማስጀመር ይፈልጋሉ?"
 
-        );
+    );
 
 
-
-    if (!answer) {
+    if(!answer){
 
         return;
 
@@ -647,59 +640,55 @@ async () => {
 
 
 
-    try {
+    try{
 
 
         await update(
+        ref(db,"queue"),
 
-            ref(db, "queue"),
+        {
 
-            {
+            lastIssued:0,
 
-                lastIssued: 0,
+            nextToCall:1,
 
-                nextToCall: 1,
+            current:{
 
-                current: {
+                number:"",
 
-                    number: "",
+                counter:"",
 
-                    counter: "",
+                calledAt:0
 
-                    calledAt: 0
+            },
 
-                },
+            tickets:{}
 
-                tickets: {}
-
-            }
-
-        );
+        });
 
 
 
         currentDisplay.innerText =
-            "---";
+        "---";
 
 
         lastCalled =
-            "";
+        "";
 
 
         statusDisplay.innerText =
-            "Queue reset / ተራው ዳግም ተጀምሯል";
+        "Queue reset / ተራው ዳግም ተጀምሯል";
+
 
     }
 
-
-    catch (error) {
-
+    catch(error){
 
         console.error(error);
 
 
         statusDisplay.innerText =
-            "Reset failed / ዳግም ማስጀመር አልተሳካም";
+        "Reset failed / ዳግም ማስጀመር አልተሳካም";
 
     }
 
@@ -723,19 +712,17 @@ onValue(
 
 
         const current =
-            snapshot.val();
+        snapshot.val();
 
 
 
-        if (
+        if(
             !current ||
             !current.number
-        ) {
-
+        ){
 
             currentDisplay.innerText =
-                "---";
-
+            "---";
 
             return;
 
@@ -744,7 +731,7 @@ onValue(
 
 
         currentDisplay.innerText =
-            current.number;
+        current.number;
 
     }
 
@@ -757,12 +744,12 @@ onValue(
 ===================================== */
 
 
-function speakEnglish(text) {
+function speakEnglish(text){
 
 
-    if (
+    if(
         !("speechSynthesis" in window)
-    ) {
+    ){
 
         return;
 
@@ -771,21 +758,21 @@ function speakEnglish(text) {
 
 
     const speech =
-        new SpeechSynthesisUtterance(
-            text
-        );
+    new SpeechSynthesisUtterance(
+        text
+    );
 
 
     speech.lang =
-        "en-US";
+    "en-US";
 
 
     speech.rate =
-        0.85;
+    0.85;
 
 
     speech.pitch =
-        1;
+    1;
 
 
 
