@@ -8,23 +8,23 @@
 
 <style>
 body{
+    margin:0;
     font-family:Arial,sans-serif;
     text-align:center;
     background:#f2f5f8;
-    margin:0;
 }
 
 header{
     background:#004d99;
     color:white;
-    padding:20px;
+    padding:25px;
 }
 
 .card{
     background:white;
     width:90%;
     max-width:650px;
-    margin:30px auto;
+    margin:35px auto;
     padding:30px;
     border-radius:15px;
     box-shadow:0 4px 15px #aaa;
@@ -37,16 +37,16 @@ select{
 }
 
 #current{
-    font-size:70px;
+    font-size:80px;
     font-weight:bold;
     color:#004d99;
-    margin:25px;
+    margin:30px;
 }
 
 button{
     padding:18px 30px;
     margin:8px;
-    border:none;
+    border:0;
     border-radius:8px;
     font-size:20px;
     color:white;
@@ -102,7 +102,6 @@ button:hover{
 
 </div>
 
-
 <script type="module">
 
 import {
@@ -134,16 +133,18 @@ const resetBtn =
     document.getElementById("resetBtn");
 
 
-let lastCalled = null;
+let lastCalled = "";
 
 
-/* -------------------------
-   NEXT
-------------------------- */
+/* =========================
+   NEXT CUSTOMER
+========================= */
 
 nextBtn.addEventListener("click", async () => {
 
     try {
+
+        nextBtn.disabled = true;
 
         const queueRef =
             ref(db, "queue");
@@ -155,16 +156,18 @@ nextBtn.addEventListener("click", async () => {
             snapshot.val() || {};
 
         const lastIssued =
-            data.lastIssued || 0;
+            Number(data.lastIssued || 0);
 
-        let nextToCall =
-            data.nextToCall || 1;
+        const nextToCall =
+            Number(data.nextToCall || 1);
 
 
         if (nextToCall > lastIssued) {
 
             statusDisplay.innerText =
-                "No waiting customers. / የሚጠብቅ ደንበኛ የለም።";
+                "No waiting customers / የሚጠብቅ ደንበኛ የለም";
+
+            nextBtn.disabled = false;
 
             return;
         }
@@ -176,14 +179,18 @@ nextBtn.addEventListener("click", async () => {
                 "queue/tickets/" + nextToCall
             );
 
+
         const ticketSnapshot =
             await get(ticketRef);
+
 
         if (!ticketSnapshot.exists()) {
 
             await update(queueRef, {
                 nextToCall: nextToCall + 1
             });
+
+            nextBtn.disabled = false;
 
             return;
         }
@@ -192,20 +199,59 @@ nextBtn.addEventListener("click", async () => {
         const ticket =
             ticketSnapshot.val();
 
-
         const counter =
             counterSelect.value;
+
+
+        /*
+         * Move queue pointer.
+         * Transaction prevents two counters
+         * from claiming the same number.
+         */
+
+        const claimRef =
+            ref(db, "queue/nextToCall");
+
+
+        const result =
+            await runTransaction(
+                claimRef,
+                current => {
+
+                    const value =
+                        Number(current || 1);
+
+                    if (value !== nextToCall) {
+                        return;
+                    }
+
+                    return value + 1;
+                }
+            );
+
+
+        if (!result.committed) {
+
+            statusDisplay.innerText =
+                "Another counter already called this number.";
+
+            nextBtn.disabled = false;
+
+            return;
+        }
+
+
+        const now =
+            Date.now();
 
 
         await update(
             ref(db, "queue"),
             {
-                nextToCall: nextToCall + 1,
-
                 current: {
                     number: ticket.number,
                     counter: counter,
-                    calledAt: Date.now()
+                    calledAt: now
                 }
             }
         );
@@ -214,7 +260,7 @@ nextBtn.addEventListener("click", async () => {
         await update(ticketRef, {
             status: "called",
             counter: counter,
-            calledAt: Date.now()
+            calledAt: now
         });
 
 
@@ -225,6 +271,10 @@ nextBtn.addEventListener("click", async () => {
             ticket.number;
 
 
+        statusDisplay.innerText =
+            "Called / ተጠርቷል";
+
+
         speakEnglish(
             "Number " +
             ticket.number.replace("A","") +
@@ -233,25 +283,24 @@ nextBtn.addEventListener("click", async () => {
         );
 
 
-        statusDisplay.innerText =
-            "Called / ተጠርቷል";
-
-
     } catch(error) {
 
         console.error(error);
 
         statusDisplay.innerText =
-            "Error connecting to Firebase.";
+            "Connection error / የግንኙነት ችግር";
 
     }
+
+
+    nextBtn.disabled = false;
 
 });
 
 
-/* -------------------------
+/* =========================
    RECALL
-------------------------- */
+========================= */
 
 recallBtn.addEventListener("click", () => {
 
@@ -278,49 +327,65 @@ recallBtn.addEventListener("click", () => {
 });
 
 
-/* -------------------------
+/* =========================
    RESET
-------------------------- */
+========================= */
 
 resetBtn.addEventListener("click", async () => {
 
     const answer =
         confirm(
-            "Reset queue? / የተራ ስርዓቱን ዳግም ጀምር?"
+            "Reset queue?\n\nየተራ ስርዓቱን ዳግም ጀምር?"
         );
+
 
     if (!answer) return;
 
 
-    await update(
-        ref(db, "queue"),
-        {
-            lastIssued: 0,
-            nextToCall: 1,
+    try {
 
-            current: {
-                number: "",
-                counter: "",
-                calledAt: 0
-            },
+        await update(
+            ref(db, "queue"),
+            {
+                lastIssued: 0,
+                nextToCall: 1,
 
-            tickets: {}
-        }
-    );
+                current: {
+                    number: "",
+                    counter: "",
+                    calledAt: 0
+                },
+
+                tickets: {}
+            }
+        );
 
 
-    currentDisplay.innerText =
-        "---";
+        currentDisplay.innerText =
+            "---";
 
-    statusDisplay.innerText =
-        "Queue reset. / ተራው ዳግም ተጀምሯል።";
+        lastCalled =
+            "";
+
+        statusDisplay.innerText =
+            "Queue reset / ተራው ዳግም ተጀምሯል";
+
+
+    } catch(error) {
+
+        console.error(error);
+
+        statusDisplay.innerText =
+            "Reset failed.";
+
+    }
 
 });
 
 
-/* -------------------------
+/* =========================
    LIVE CURRENT NUMBER
-------------------------- */
+========================= */
 
 onValue(
     ref(db, "queue/current"),
@@ -328,6 +393,7 @@ onValue(
 
         const current =
             snapshot.val();
+
 
         if (!current || !current.number) {
 
@@ -345,23 +411,29 @@ onValue(
 );
 
 
-/* -------------------------
+/* =========================
    ENGLISH VOICE
-------------------------- */
+========================= */
 
 function speakEnglish(text){
 
     if (!("speechSynthesis" in window))
         return;
 
+
     const speech =
         new SpeechSynthesisUtterance(text);
 
-    speech.lang = "en-US";
 
-    speech.rate = 0.85;
+    speech.lang =
+        "en-US";
 
-    speech.pitch = 1;
+    speech.rate =
+        0.85;
+
+    speech.pitch =
+        1;
+
 
     window.speechSynthesis.cancel();
 
