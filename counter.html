@@ -7,80 +7,85 @@
 <title>CRRSA Counter</title>
 
 <style>
-*{
-    box-sizing:border-box;
+* {
+    box-sizing: border-box;
 }
 
-body{
-    margin:0;
-    font-family:Arial,sans-serif;
-    text-align:center;
-    background:#f2f5f8;
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background: #f2f5f8;
 }
 
-header{
-    background:#004d99;
-    color:white;
-    padding:25px;
+header {
+    background: #004d99;
+    color: white;
+    padding: 25px;
 }
 
-header h1{
-    margin:0;
-    font-size:42px;
+header h1 {
+    margin: 0;
+    font-size: 42px;
 }
 
-header h2{
-    margin:8px;
+header h2 {
+    margin: 8px;
 }
 
-.card{
-    background:white;
-    width:90%;
-    max-width:700px;
-    margin:35px auto;
-    padding:30px;
-    border-radius:15px;
-    box-shadow:0 4px 15px #aaa;
+.card {
+    background: white;
+    width: 90%;
+    max-width: 700px;
+    margin: 35px auto;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px #aaa;
 }
 
-select{
-    padding:14px;
-    font-size:20px;
-    margin:15px;
-    border-radius:8px;
+select {
+    padding: 14px;
+    font-size: 20px;
+    margin: 15px;
+    border-radius: 8px;
 }
 
-#current{
-    font-size:90px;
-    font-weight:bold;
-    color:#004d99;
-    margin:30px;
+#current {
+    font-size: 90px;
+    font-weight: bold;
+    color: #004d99;
+    margin: 30px;
 }
 
-button{
-    padding:18px 30px;
-    margin:8px;
-    border:0;
-    border-radius:8px;
-    font-size:20px;
-    color:white;
-    background:#004d99;
-    cursor:pointer;
+button {
+    padding: 18px 30px;
+    margin: 8px;
+    border: 0;
+    border-radius: 8px;
+    font-size: 20px;
+    color: white;
+    background: #004d99;
+    cursor: pointer;
 }
 
-button:hover{
-    background:#003366;
+button:hover {
+    background: #003366;
 }
 
-button:disabled{
-    background:#999;
-    cursor:not-allowed;
+button:disabled {
+    background: #999;
+    cursor: not-allowed;
 }
 
-#status{
-    margin:20px;
-    font-size:18px;
-    min-height:30px;
+#status {
+    margin: 20px;
+    font-size: 18px;
+    min-height: 30px;
+}
+
+.already {
+    color: #d32f2f;
+    font-weight: bold;
 }
 </style>
 </head>
@@ -122,6 +127,7 @@ button:disabled{
 
 </div>
 
+
 <script type="module">
 
 import {
@@ -155,21 +161,25 @@ const resetBtn =
 let lastCalled = "";
 
 
-/* =========================
-   NEXT
-========================= */
+/* =========================================
+   NEXT CUSTOMER
+========================================= */
 
 nextBtn.addEventListener("click", async () => {
 
     nextBtn.disabled = true;
 
+    statusDisplay.className = "";
+
     statusDisplay.innerText =
         "Calling next customer... / ቀጣዩን ደንበኛ በመጥራት ላይ...";
+
 
     try {
 
         const counter =
             counterSelect.value;
+
 
         const queueRef =
             ref(db, "queue");
@@ -184,29 +194,39 @@ nextBtn.addEventListener("click", async () => {
                         return;
                     }
 
+
                     const lastIssued =
                         Number(queue.lastIssued || 0);
+
 
                     const nextToCall =
                         Number(queue.nextToCall || 1);
 
 
-                    /* No waiting customer */
+                    /* --------------------------------
+                       NO WAITING CUSTOMER
+                    -------------------------------- */
 
                     if (
                         nextToCall > lastIssued
                     ) {
+
                         return;
+
                     }
 
 
-                    /* Ticket list missing */
+                    /* --------------------------------
+                       TICKET DOES NOT EXIST
+                    -------------------------------- */
 
                     if (
                         !queue.tickets ||
                         !queue.tickets[nextToCall]
                     ) {
+
                         return;
+
                     }
 
 
@@ -214,18 +234,22 @@ nextBtn.addEventListener("click", async () => {
                         queue.tickets[nextToCall];
 
 
-                    /*
-                     * IMPORTANT:
-                     * Only the waiting ticket is called.
-                     */
+                    /* --------------------------------
+                       ALREADY CALLED
+                    -------------------------------- */
 
                     if (
-                        ticket.status &&
-                        ticket.status !== "waiting"
+                        ticket.status === "called"
                     ) {
+
                         return;
+
                     }
 
+
+                    /* --------------------------------
+                       CALL CUSTOMER
+                    -------------------------------- */
 
                     const now =
                         Date.now();
@@ -234,8 +258,10 @@ nextBtn.addEventListener("click", async () => {
                     ticket.status =
                         "called";
 
+
                     ticket.counter =
                         counter;
+
 
                     ticket.calledAt =
                         now;
@@ -245,18 +271,17 @@ nextBtn.addEventListener("click", async () => {
                         ticket;
 
 
-                    /*
-                     * Move shared queue pointer.
-                     */
+                    /* --------------------------------
+                       MOVE TO NEXT NUMBER
+                    -------------------------------- */
 
                     queue.nextToCall =
                         nextToCall + 1;
 
 
-                    /*
-                     * Current number shown
-                     * on every counter/TV.
-                     */
+                    /* --------------------------------
+                       CURRENT NUMBER
+                    -------------------------------- */
 
                     queue.current = {
 
@@ -278,10 +303,16 @@ nextBtn.addEventListener("click", async () => {
             );
 
 
+        /* =========================================
+           TRANSACTION FAILED
+        ========================================= */
+
         if (!result.committed) {
 
-            statusDisplay.innerText =
-                "No waiting customer / የሚጠብቅ ደንበኛ የለም";
+            statusDisplay.className = "already";
+
+            statusDisplay.innerHTML =
+                "Already called / ተጠርቷል";
 
             nextBtn.disabled = false;
 
@@ -289,8 +320,13 @@ nextBtn.addEventListener("click", async () => {
         }
 
 
+        /* =========================================
+           GET CURRENT NUMBER
+        ========================================= */
+
         const queue =
             result.snapshot.val();
+
 
         const current =
             queue.current;
@@ -301,8 +337,10 @@ nextBtn.addEventListener("click", async () => {
             !current.number
         ) {
 
-            statusDisplay.innerText =
-                "No customer available.";
+            statusDisplay.className = "already";
+
+            statusDisplay.innerHTML =
+                "Already called / ተጠርቷል";
 
             nextBtn.disabled = false;
 
@@ -313,9 +351,12 @@ nextBtn.addEventListener("click", async () => {
         currentDisplay.innerText =
             current.number;
 
+
         lastCalled =
             current.number;
 
+
+        statusDisplay.className = "";
 
         statusDisplay.innerText =
             "Called / ተጠርቷል";
@@ -333,6 +374,9 @@ nextBtn.addEventListener("click", async () => {
 
         console.error(error);
 
+
+        statusDisplay.className = "already";
+
         statusDisplay.innerText =
             "Connection error / የግንኙነት ችግር";
     }
@@ -343,9 +387,9 @@ nextBtn.addEventListener("click", async () => {
 });
 
 
-/* =========================
+/* =========================================
    RECALL
-========================= */
+========================================= */
 
 recallBtn.addEventListener("click", () => {
 
@@ -376,9 +420,9 @@ recallBtn.addEventListener("click", () => {
 });
 
 
-/* =========================
+/* =========================================
    RESET
-========================= */
+========================================= */
 
 resetBtn.addEventListener("click", async () => {
 
@@ -400,17 +444,23 @@ resetBtn.addEventListener("click", async () => {
         await update(
             ref(db, "queue"),
             {
+
                 lastIssued: 0,
 
                 nextToCall: 1,
 
                 current: {
+
                     number: "",
+
                     counter: "",
+
                     calledAt: 0
+
                 },
 
                 tickets: {}
+
             }
         );
 
@@ -418,9 +468,12 @@ resetBtn.addEventListener("click", async () => {
         currentDisplay.innerText =
             "---";
 
+
         lastCalled =
             "";
 
+
+        statusDisplay.className = "";
 
         statusDisplay.innerText =
             "Queue reset / ተራው ዳግም ተጀምሯል";
@@ -430,16 +483,19 @@ resetBtn.addEventListener("click", async () => {
 
         console.error(error);
 
+        statusDisplay.className = "already";
+
         statusDisplay.innerText =
             "Reset failed / ዳግም ማስጀመር አልተሳካም";
+
     }
 
 });
 
 
-/* =========================
-   LIVE CURRENT
-========================= */
+/* =========================================
+   LIVE CURRENT NUMBER
+========================================= */
 
 onValue(
     ref(db, "queue/current"),
@@ -468,16 +524,18 @@ onValue(
 );
 
 
-/* =========================
+/* =========================================
    ENGLISH VOICE
-========================= */
+========================================= */
 
 function speakEnglish(text) {
 
     if (
         !("speechSynthesis" in window)
     ) {
+
         return;
+
     }
 
 
@@ -488,8 +546,10 @@ function speakEnglish(text) {
     speech.lang =
         "en-US";
 
+
     speech.rate =
         0.85;
+
 
     speech.pitch =
         1;
@@ -497,9 +557,11 @@ function speakEnglish(text) {
 
     window.speechSynthesis.cancel();
 
+
     window.speechSynthesis.speak(
         speech
     );
+
 }
 
 </script>
