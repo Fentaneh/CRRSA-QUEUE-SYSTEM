@@ -1,12 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
 
 <title>CRRSA Counter</title>
 
 <style>
+
 * {
     box-sizing: border-box;
 }
@@ -83,99 +88,157 @@ button:disabled {
     min-height: 30px;
 }
 
-.already {
-    color: #d32f2f;
-    font-weight: bold;
-}
 </style>
+
 </head>
+
 
 <body>
 
+
 <header>
-    <h1>CRRSA</h1>
-    <h2>Counter Service</h2>
-    <p>የቆጣሪ አገልግሎት</p>
+
+<h1>CRRSA</h1>
+
+<h2>Counter Service</h2>
+
+<p>የቆጣሪ አገልግሎት</p>
+
 </header>
+
 
 <div class="card">
 
-    <h2>Counter / ቆጣሪ</h2>
 
-    <select id="counter">
-        <option value="1">Counter 1 / ቆጣሪ 1</option>
-        <option value="2">Counter 2 / ቆጣሪ 2</option>
-        <option value="3">Counter 3 / ቆጣሪ 3</option>
-        <option value="4">Counter 4 / ቆጣሪ 4</option>
-    </select>
+<h2>Counter / ቆጣሪ</h2>
 
-    <div id="current">---</div>
 
-    <button id="nextBtn">
-        NEXT<br>ቀጣይ
-    </button>
+<select id="counter">
 
-    <button id="recallBtn">
-        RECALL<br>እንደገና ጥራ
-    </button>
+<option value="1">
+Counter 1 / ቆጣሪ 1
+</option>
 
-    <button id="resetBtn">
-        RESET<br>ዳግም ጀምር
-    </button>
+<option value="2">
+Counter 2 / ቆጣሪ 2
+</option>
 
-    <div id="status"></div>
+<option value="3">
+Counter 3 / ቆጣሪ 3
+</option>
+
+<option value="4">
+Counter 4 / ቆጣሪ 4
+</option>
+
+</select>
+
+
+<div id="current">
+---
+</div>
+
+
+<button id="nextBtn">
+
+NEXT
+<br>
+
+ቀጣይ
+
+</button>
+
+
+<button id="recallBtn">
+
+RECALL
+<br>
+
+እንደገና ጥራ
+
+</button>
+
+
+<button id="resetBtn">
+
+RESET
+<br>
+
+ዳግም ጀምር
+
+</button>
+
+
+<div id="status"></div>
+
 
 </div>
 
 
+
 <script type="module">
 
+
 import {
+
     db,
     ref,
     onValue,
     runTransaction,
     update
+
 } from "./firebase.js";
+
 
 
 const counterSelect =
     document.getElementById("counter");
 
+
 const currentDisplay =
     document.getElementById("current");
+
 
 const statusDisplay =
     document.getElementById("status");
 
+
 const nextBtn =
     document.getElementById("nextBtn");
 
+
 const recallBtn =
     document.getElementById("recallBtn");
+
 
 const resetBtn =
     document.getElementById("resetBtn");
 
 
+
 let lastCalled = "";
 
 
-/* =========================================
-   NEXT CUSTOMER
-========================================= */
 
-nextBtn.addEventListener("click", async () => {
+/* =====================================
+   NEXT CUSTOMER
+===================================== */
+
+
+nextBtn.addEventListener(
+"click",
+async () => {
+
 
     nextBtn.disabled = true;
 
-    statusDisplay.className = "";
 
     statusDisplay.innerText =
         "Calling next customer... / ቀጣዩን ደንበኛ በመጥራት ላይ...";
 
 
     try {
+
 
         const counter =
             counterSelect.value;
@@ -185,27 +248,92 @@ nextBtn.addEventListener("click", async () => {
             ref(db, "queue");
 
 
+
         const result =
             await runTransaction(
                 queueRef,
+
                 (queue) => {
 
+
                     if (!queue) {
+
                         return;
+
                     }
 
 
+
                     const lastIssued =
-                        Number(queue.lastIssued || 0);
+                        Number(
+                            queue.lastIssued || 0
+                        );
 
 
-                    const nextToCall =
-                        Number(queue.nextToCall || 1);
+
+                    let nextToCall =
+                        Number(
+                            queue.nextToCall || 1
+                        );
 
 
-                    /* --------------------------------
-                       NO WAITING CUSTOMER
-                    -------------------------------- */
+
+                    if (
+                        !queue.tickets
+                    ) {
+
+                        return;
+
+                    }
+
+
+
+                    /*
+                    ==================================
+                    IMPORTANT FIX
+
+                    Skip every ticket that is already
+                    called and find the next WAITING
+                    ticket automatically.
+                    ==================================
+                    */
+
+
+                    while (
+                        nextToCall <= lastIssued
+                    ) {
+
+
+                        const ticket =
+                            queue.tickets[
+                                nextToCall
+                            ];
+
+
+
+                        if (
+                            ticket &&
+                            ticket.status === "waiting"
+                        ) {
+
+                            break;
+
+                        }
+
+
+
+                        nextToCall++;
+
+                    }
+
+
+
+                    /*
+                    ==================================
+                    NO WAITING CUSTOMER
+                    ==================================
+                    */
+
 
                     if (
                         nextToCall > lastIssued
@@ -216,30 +344,16 @@ nextBtn.addEventListener("click", async () => {
                     }
 
 
-                    /* --------------------------------
-                       TICKET DOES NOT EXIST
-                    -------------------------------- */
-
-                    if (
-                        !queue.tickets ||
-                        !queue.tickets[nextToCall]
-                    ) {
-
-                        return;
-
-                    }
-
 
                     const ticket =
-                        queue.tickets[nextToCall];
+                        queue.tickets[
+                            nextToCall
+                        ];
 
 
-                    /* --------------------------------
-                       ALREADY CALLED
-                    -------------------------------- */
 
                     if (
-                        ticket.status === "called"
+                        !ticket
                     ) {
 
                         return;
@@ -247,12 +361,17 @@ nextBtn.addEventListener("click", async () => {
                     }
 
 
-                    /* --------------------------------
-                       CALL CUSTOMER
-                    -------------------------------- */
 
                     const now =
                         Date.now();
+
+
+
+                    /*
+                    ==================================
+                    CALL CUSTOMER
+                    ==================================
+                    */
 
 
                     ticket.status =
@@ -267,21 +386,31 @@ nextBtn.addEventListener("click", async () => {
                         now;
 
 
-                    queue.tickets[nextToCall] =
-                        ticket;
+
+                    queue.tickets[
+                        nextToCall
+                    ] = ticket;
 
 
-                    /* --------------------------------
-                       MOVE TO NEXT NUMBER
-                    -------------------------------- */
+
+                    /*
+                    ==================================
+                    MOVE POINTER
+                    ==================================
+                    */
+
 
                     queue.nextToCall =
                         nextToCall + 1;
 
 
-                    /* --------------------------------
-                       CURRENT NUMBER
-                    -------------------------------- */
+
+                    /*
+                    ==================================
+                    CURRENT NUMBER
+                    ==================================
+                    */
+
 
                     queue.current = {
 
@@ -297,32 +426,46 @@ nextBtn.addEventListener("click", async () => {
                     };
 
 
+
                     return queue;
 
                 }
             );
 
 
-        /* =========================================
-           TRANSACTION FAILED
-        ========================================= */
 
-        if (!result.committed) {
+        /*
+        ==================================
+        TRANSACTION NOT COMMITTED
+        ==================================
+        */
 
-            statusDisplay.className = "already";
 
-            statusDisplay.innerHTML =
-                "Already called / ተጠርቷል";
+        if (
+            !result.committed
+        ) {
 
-            nextBtn.disabled = false;
+
+            statusDisplay.innerText =
+                "No waiting customer / የሚጠብቅ ደንበኛ የለም";
+
+
+            nextBtn.disabled =
+                false;
+
 
             return;
+
         }
 
 
-        /* =========================================
-           GET CURRENT NUMBER
-        ========================================= */
+
+        /*
+        ==================================
+        GET RESULT
+        ==================================
+        */
+
 
         const queue =
             result.snapshot.val();
@@ -332,20 +475,32 @@ nextBtn.addEventListener("click", async () => {
             queue.current;
 
 
+
         if (
             !current ||
             !current.number
         ) {
 
-            statusDisplay.className = "already";
 
-            statusDisplay.innerHTML =
-                "Already called / ተጠርቷል";
+            statusDisplay.innerText =
+                "No waiting customer / የሚጠብቅ ደንበኛ የለም";
 
-            nextBtn.disabled = false;
+
+            nextBtn.disabled =
+                false;
+
 
             return;
+
         }
+
+
+
+        /*
+        ==================================
+        SHOW NUMBER
+        ==================================
+        */
 
 
         currentDisplay.innerText =
@@ -356,62 +511,102 @@ nextBtn.addEventListener("click", async () => {
             current.number;
 
 
-        statusDisplay.className = "";
 
         statusDisplay.innerText =
             "Called / ተጠርቷል";
 
 
+
+        /*
+        ==================================
+        VOICE
+        ==================================
+        */
+
+
         speakEnglish(
+
             "Number " +
-            current.number.replace("A", "") +
+
+            current.number.replace(
+                "A",
+                ""
+            ) +
+
             ". Please go to counter " +
+
             current.counter
+
         );
 
 
-    } catch (error) {
+    }
+
+    catch (error) {
+
 
         console.error(error);
 
 
-        statusDisplay.className = "already";
-
         statusDisplay.innerText =
             "Connection error / የግንኙነት ችግር";
+
     }
 
 
-    nextBtn.disabled = false;
+
+    nextBtn.disabled =
+        false;
 
 });
 
 
-/* =========================================
+
+/* =====================================
    RECALL
-========================================= */
+===================================== */
 
-recallBtn.addEventListener("click", () => {
 
-    if (!lastCalled) {
+recallBtn.addEventListener(
+"click",
+() => {
+
+
+    if (
+        !lastCalled
+    ) {
+
 
         statusDisplay.innerText =
             "No number to recall / የሚደገም ቁጥር የለም";
 
+
         return;
+
     }
+
 
 
     const counter =
         counterSelect.value;
 
 
+
     speakEnglish(
+
         "Number " +
-        lastCalled.replace("A", "") +
+
+        lastCalled.replace(
+            "A",
+            ""
+        ) +
+
         ". Please go to counter " +
+
         counter
+
     );
+
 
 
     statusDisplay.innerText =
@@ -420,29 +615,45 @@ recallBtn.addEventListener("click", () => {
 });
 
 
-/* =========================================
-   RESET
-========================================= */
 
-resetBtn.addEventListener("click", async () => {
+/* =====================================
+   RESET
+===================================== */
+
+
+resetBtn.addEventListener(
+"click",
+async () => {
+
 
     const answer =
         confirm(
+
             "Reset entire queue?\n\n" +
+
             "የተራ ስርዓቱን ሙሉ በሙሉ " +
+
             "ዳግም ማስጀመር ይፈልጋሉ?"
+
         );
 
 
+
     if (!answer) {
+
         return;
+
     }
+
 
 
     try {
 
+
         await update(
+
             ref(db, "queue"),
+
             {
 
                 lastIssued: 0,
@@ -462,7 +673,9 @@ resetBtn.addEventListener("click", async () => {
                 tickets: {}
 
             }
+
         );
+
 
 
         currentDisplay.innerText =
@@ -473,17 +686,17 @@ resetBtn.addEventListener("click", async () => {
             "";
 
 
-        statusDisplay.className = "";
-
         statusDisplay.innerText =
             "Queue reset / ተራው ዳግም ተጀምሯል";
 
+    }
 
-    } catch (error) {
+
+    catch (error) {
+
 
         console.error(error);
 
-        statusDisplay.className = "already";
 
         statusDisplay.innerText =
             "Reset failed / ዳግም ማስጀመር አልተሳካም";
@@ -493,16 +706,25 @@ resetBtn.addEventListener("click", async () => {
 });
 
 
-/* =========================================
+
+/* =====================================
    LIVE CURRENT NUMBER
-========================================= */
+===================================== */
+
 
 onValue(
-    ref(db, "queue/current"),
+
+    ref(
+        db,
+        "queue/current"
+    ),
+
     (snapshot) => {
+
 
         const current =
             snapshot.val();
+
 
 
         if (
@@ -510,25 +732,33 @@ onValue(
             !current.number
         ) {
 
+
             currentDisplay.innerText =
                 "---";
 
+
             return;
+
         }
+
 
 
         currentDisplay.innerText =
             current.number;
 
     }
+
 );
 
 
-/* =========================================
+
+/* =====================================
    ENGLISH VOICE
-========================================= */
+===================================== */
+
 
 function speakEnglish(text) {
+
 
     if (
         !("speechSynthesis" in window)
@@ -539,8 +769,11 @@ function speakEnglish(text) {
     }
 
 
+
     const speech =
-        new SpeechSynthesisUtterance(text);
+        new SpeechSynthesisUtterance(
+            text
+        );
 
 
     speech.lang =
@@ -555,6 +788,7 @@ function speakEnglish(text) {
         1;
 
 
+
     window.speechSynthesis.cancel();
 
 
@@ -564,7 +798,10 @@ function speakEnglish(text) {
 
 }
 
+
 </script>
 
+
 </body>
+
 </html>
