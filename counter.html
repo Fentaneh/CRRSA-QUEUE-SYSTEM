@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,237 +8,354 @@
 
 <style>
 body{
-    margin:0;
     font-family:Arial,sans-serif;
-    background:#eef3f8;
     text-align:center;
+    background:#f2f5f8;
+    margin:0;
 }
 
-.header{
+header{
     background:#004d99;
     color:white;
-    padding:25px;
-}
-
-.header h1{
-    margin:0;
+    padding:20px;
 }
 
 .card{
     background:white;
     width:90%;
-    max-width:600px;
-    margin:40px auto;
+    max-width:650px;
+    margin:30px auto;
     padding:30px;
     border-radius:15px;
-    box-shadow:0 4px 15px #bbb;
-}
-
-#current{
-    font-size:75px;
-    font-weight:bold;
-    color:#d99a00;
-    margin:25px;
-}
-
-#status{
-    font-size:22px;
-    margin:20px;
-}
-
-button{
-    padding:18px 35px;
-    margin:8px;
-    border:0;
-    border-radius:8px;
-    font-size:22px;
-    cursor:pointer;
-}
-
-.next{
-    background:#008000;
-    color:white;
-}
-
-.recall{
-    background:#004d99;
-    color:white;
-}
-
-.reset{
-    background:#cc0000;
-    color:white;
-}
-
-.counter{
-    margin:20px;
-    font-size:22px;
+    box-shadow:0 4px 15px #aaa;
 }
 
 select{
     padding:12px;
     font-size:20px;
+    margin:15px;
+}
+
+#current{
+    font-size:70px;
+    font-weight:bold;
+    color:#004d99;
+    margin:25px;
+}
+
+button{
+    padding:18px 30px;
+    margin:8px;
+    border:none;
+    border-radius:8px;
+    font-size:20px;
+    color:white;
+    background:#004d99;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#003366;
+}
+
+#status{
+    margin:20px;
+    font-size:18px;
 }
 </style>
-
 </head>
 
 <body>
 
-<div class="header">
-
-<h1>CRRSA GULELE WOREDA 03</h1>
-
-<p>Counter Calling System</p>
-
-</div>
-
+<header>
+    <h1>CRRSA</h1>
+    <h2>Counter Service</h2>
+    <p>የቆጣሪ አገልግሎት</p>
+</header>
 
 <div class="card">
 
-<h2>Counter Staff</h2>
+    <h2>Counter / ቆጣሪ</h2>
 
-<div class="counter">
+    <select id="counter">
+        <option value="1">Counter 1 / ቆጣሪ 1</option>
+        <option value="2">Counter 2 / ቆጣሪ 2</option>
+        <option value="3">Counter 3 / ቆጣሪ 3</option>
+        <option value="4">Counter 4 / ቆጣሪ 4</option>
+    </select>
 
-<label>Counter:</label>
+    <div id="current">---</div>
 
-<select id="counter">
+    <button id="nextBtn">
+        NEXT<br>ቀጣይ
+    </button>
 
-<option value="1">Counter 1</option>
-<option value="2">Counter 2</option>
-<option value="3">Counter 3</option>
-<option value="4">Counter 4</option>
+    <button id="recallBtn">
+        RECALL<br>እንደገና ጥራ
+    </button>
 
-</select>
+    <button id="resetBtn">
+        RESET<br>ዳግም ጀምር
+    </button>
 
-</div>
-
-
-<div id="current">
------
-</div>
-
-
-<div id="status">
-Waiting...
-</div>
-
-
-<button
-class="next"
-onclick="nextCustomer()">
-
-➡️ NEXT
-<br>
-ቀጣይ
-
-</button>
-
-
-<button
-class="recall"
-onclick="recallCustomer()">
-
-🔊 RECALL
-<br>
-እንደገና ጥራ
-
-</button>
-
-
-<button
-class="reset"
-onclick="resetQueue()">
-
-RESET
-<br>
-እንደገና ጀምር
-
-</button>
+    <div id="status"></div>
 
 </div>
 
 
-<script>
+<script type="module">
 
-let nextNumber =
-Number(localStorage.getItem("nextNumber")) || 1;
-
-
-let currentNumber =
-Number(localStorage.getItem("currentNumber")) || 0;
-
-
-function nextCustomer(){
-
-    if(nextNumber <= currentNumber){
-        nextNumber = currentNumber + 1;
-    }
-
-    currentNumber = nextNumber;
-
-    let number =
-        "A" + String(currentNumber).padStart(3,"0");
-
-    let counter =
-        document.getElementById("counter").value;
-
-    document.getElementById("current").innerText =
-        number;
-
-    document.getElementById("status").innerText =
-        "Calling " + number +
-        " → Counter " + counter;
-
-    localStorage.setItem(
-        "currentNumber",
-        currentNumber
-    );
-
-    localStorage.setItem(
-        "currentCall",
-        JSON.stringify({
-            number:number,
-            counter:counter
-        })
-    );
-
-    speak(number,counter);
-
-    nextNumber++;
-
-    localStorage.setItem(
-        "nextNumber",
-        nextNumber
-    );
-}
+import {
+    db,
+    ref,
+    get,
+    update,
+    runTransaction,
+    onValue
+} from "./firebase.js";
 
 
-function recallCustomer(){
+const counterSelect =
+    document.getElementById("counter");
 
-    let data =
-        JSON.parse(
-            localStorage.getItem("currentCall")
+const currentDisplay =
+    document.getElementById("current");
+
+const statusDisplay =
+    document.getElementById("status");
+
+const nextBtn =
+    document.getElementById("nextBtn");
+
+const recallBtn =
+    document.getElementById("recallBtn");
+
+const resetBtn =
+    document.getElementById("resetBtn");
+
+
+let lastCalled = null;
+
+
+/* -------------------------
+   NEXT
+------------------------- */
+
+nextBtn.addEventListener("click", async () => {
+
+    try {
+
+        const queueRef =
+            ref(db, "queue");
+
+        const snapshot =
+            await get(queueRef);
+
+        const data =
+            snapshot.val() || {};
+
+        const lastIssued =
+            data.lastIssued || 0;
+
+        let nextToCall =
+            data.nextToCall || 1;
+
+
+        if (nextToCall > lastIssued) {
+
+            statusDisplay.innerText =
+                "No waiting customers. / የሚጠብቅ ደንበኛ የለም።";
+
+            return;
+        }
+
+
+        const ticketRef =
+            ref(
+                db,
+                "queue/tickets/" + nextToCall
+            );
+
+        const ticketSnapshot =
+            await get(ticketRef);
+
+        if (!ticketSnapshot.exists()) {
+
+            await update(queueRef, {
+                nextToCall: nextToCall + 1
+            });
+
+            return;
+        }
+
+
+        const ticket =
+            ticketSnapshot.val();
+
+
+        const counter =
+            counterSelect.value;
+
+
+        await update(
+            ref(db, "queue"),
+            {
+                nextToCall: nextToCall + 1,
+
+                current: {
+                    number: ticket.number,
+                    counter: counter,
+                    calledAt: Date.now()
+                }
+            }
         );
 
-    if(!data){
-        alert("No customer to recall.");
+
+        await update(ticketRef, {
+            status: "called",
+            counter: counter,
+            calledAt: Date.now()
+        });
+
+
+        currentDisplay.innerText =
+            ticket.number;
+
+        lastCalled =
+            ticket.number;
+
+
+        speakEnglish(
+            "Number " +
+            ticket.number.replace("A","") +
+            ". Please go to counter " +
+            counter
+        );
+
+
+        statusDisplay.innerText =
+            "Called / ተጠርቷል";
+
+
+    } catch(error) {
+
+        console.error(error);
+
+        statusDisplay.innerText =
+            "Error connecting to Firebase.";
+
+    }
+
+});
+
+
+/* -------------------------
+   RECALL
+------------------------- */
+
+recallBtn.addEventListener("click", () => {
+
+    if (!lastCalled) {
+
+        statusDisplay.innerText =
+            "No number to recall.";
+
         return;
     }
 
-    speak(
-        data.number,
-        data.counter
+
+    const counter =
+        counterSelect.value;
+
+
+    speakEnglish(
+        "Number " +
+        lastCalled.replace("A","") +
+        ". Please go to counter " +
+        counter
     );
-}
+
+});
 
 
-function speak(number,counter){
+/* -------------------------
+   RESET
+------------------------- */
 
-    speechSynthesis.cancel();
+resetBtn.addEventListener("click", async () => {
 
-    let speech =
-        new SpeechSynthesisUtterance();
+    const answer =
+        confirm(
+            "Reset queue? / የተራ ስርዓቱን ዳግም ጀምር?"
+        );
+
+    if (!answer) return;
+
+
+    await update(
+        ref(db, "queue"),
+        {
+            lastIssued: 0,
+            nextToCall: 1,
+
+            current: {
+                number: "",
+                counter: "",
+                calledAt: 0
+            },
+
+            tickets: {}
+        }
+    );
+
+
+    currentDisplay.innerText =
+        "---";
+
+    statusDisplay.innerText =
+        "Queue reset. / ተራው ዳግም ተጀምሯል።";
+
+});
+
+
+/* -------------------------
+   LIVE CURRENT NUMBER
+------------------------- */
+
+onValue(
+    ref(db, "queue/current"),
+    snapshot => {
+
+        const current =
+            snapshot.val();
+
+        if (!current || !current.number) {
+
+            currentDisplay.innerText =
+                "---";
+
+            return;
+        }
+
+
+        currentDisplay.innerText =
+            current.number;
+
+    }
+);
+
+
+/* -------------------------
+   ENGLISH VOICE
+------------------------- */
+
+function speakEnglish(text){
+
+    if (!("speechSynthesis" in window))
+        return;
+
+    const speech =
+        new SpeechSynthesisUtterance(text);
 
     speech.lang = "en-US";
 
@@ -247,48 +363,9 @@ function speak(number,counter){
 
     speech.pitch = 1;
 
-    speech.text =
-        "Number " +
-        number +
-        ". Please go to counter " +
-        counter;
+    window.speechSynthesis.cancel();
 
-    speechSynthesis.speak(speech);
-}
-
-
-function resetQueue(){
-
-    if(!confirm(
-        "Reset the queue?"
-    )){
-        return;
-    }
-
-    nextNumber = 1;
-    currentNumber = 0;
-
-    localStorage.setItem(
-        "nextNumber",
-        1
-    );
-
-    localStorage.setItem(
-        "currentNumber",
-        0
-    );
-
-    localStorage.removeItem(
-        "currentCall"
-    );
-
-    document.getElementById(
-        "current"
-    ).innerText = "-----";
-
-    document.getElementById(
-        "status"
-    ).innerText = "Queue Reset";
+    window.speechSynthesis.speak(speech);
 }
 
 </script>
