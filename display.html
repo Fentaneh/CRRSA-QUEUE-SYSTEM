@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>CRRSA Queue Display</title>
+<title>CRRSA - Now Serving</title>
 
 <style>
 
@@ -16,201 +16,316 @@
 body{
     margin:0;
     font-family:Arial,sans-serif;
-    background:#004d99;
+    background:#071a2b;
     color:white;
     text-align:center;
-    min-height:100vh;
 }
 
-.header{
-    padding:30px 10px;
+header{
+    background:#004d99;
+    padding:25px;
 }
 
-.header h1{
+header h1{
     margin:0;
     font-size:50px;
 }
 
-.header p{
-    font-size:25px;
+header p{
+    margin:8px;
+    font-size:22px;
 }
 
-.label{
+.main{
+    min-height:75vh;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+}
+
+.title{
+    font-size:45px;
+    margin-bottom:20px;
+}
+
+.amharic{
     font-size:30px;
-    margin-top:20px;
+    margin-bottom:25px;
 }
 
 #number{
     font-size:150px;
     font-weight:bold;
-    color:#ffdd00;
-    margin:20px 0;
+    color:#ffd700;
+    margin:10px;
 }
 
 #counter{
-    font-size:60px;
-    color:#00ff99;
-    font-weight:bold;
+    font-size:50px;
+    margin:15px;
 }
 
-#message{
-    font-size:35px;
-    margin-top:30px;
+#counterAm{
+    font-size:32px;
 }
 
-.language{
-    position:absolute;
-    top:15px;
-    right:15px;
+.status{
+    font-size:25px;
+    margin-top:25px;
 }
 
-.language button{
-    padding:10px 15px;
-    margin:3px;
-    border:0;
-    border-radius:6px;
+button{
+    padding:15px 25px;
+    margin:8px;
+    border:none;
+    border-radius:8px;
+    background:#004d99;
+    color:white;
+    font-size:18px;
     cursor:pointer;
 }
 
-.footer{
-    position:fixed;
-    bottom:10px;
-    width:100%;
-    font-size:18px;
+button:hover{
+    background:#0066cc;
 }
 
 </style>
-
 </head>
+
 
 <body>
 
-<div class="header">
+<header>
 
-    <h1>CRRSA GULELE WOREDA 03</h1>
+    <h1>CRRSA</h1>
 
-    <p id="title">
-        Civil Registration & Residency Service
+    <p>
+        Queue Management System
     </p>
 
+    <p>
+        የተራ አስተዳደር ስርዓት
+    </p>
+
+</header>
+
+
+<div class="main">
+
+    <div class="title">
+        NOW SERVING
+    </div>
+
+    <div class="amharic">
+        አሁን የሚጠራው
+    </div>
+
+
+    <div id="number">
+        ---
+    </div>
+
+
+    <div id="counter">
+        Please wait
+    </div>
+
+    <div id="counterAm">
+        እባክዎ ይጠብቁ
+    </div>
+
+
+    <div class="status">
+        Please go to the displayed counter
+    </div>
+
+    <div class="status">
+        እባክዎ ወደተጠቀሰው ቆጣሪ ይሂዱ
+    </div>
+
+
+    <div>
+
+        <button onclick="testEnglish()">
+            🔊 English
+        </button>
+
+        <button onclick="testAmharic()">
+            🔊 አማርኛ
+        </button>
+
+    </div>
+
 </div>
 
 
-<div class="language">
+<script type="module">
 
-    <button onclick="english()">
-        English
-    </button>
-
-    <button onclick="amharic()">
-        አማርኛ
-    </button>
-
-</div>
+import {
+    db,
+    ref,
+    onValue
+} from "./firebase.js";
 
 
-<div class="label" id="now">
-    NOW SERVING
-</div>
+const numberDisplay =
+    document.getElementById("number");
+
+const counterDisplay =
+    document.getElementById("counter");
+
+const counterAmDisplay =
+    document.getElementById("counterAm");
 
 
-<div id="number">
-    -----
-</div>
+/* =========================
+   FIREBASE LIVE DATA
+========================= */
+
+onValue(
+    ref(db, "queue/current"),
+    (snapshot) => {
+
+        const current =
+            snapshot.val();
 
 
-<div id="counter">
-    Counter -
-</div>
+        if(
+            !current ||
+            !current.number
+        ){
+
+            numberDisplay.innerText =
+                "---";
+
+            counterDisplay.innerText =
+                "Please wait";
+
+            counterAmDisplay.innerText =
+                "እባክዎ ይጠብቁ";
+
+            return;
+        }
 
 
-<div id="message">
-    Please wait for your number.
-</div>
+        const number =
+            current.number;
+
+        const counter =
+            current.counter;
 
 
-<div class="footer">
-    CRRSA Queue System
-</div>
+        numberDisplay.innerText =
+            number;
 
 
-<script>
+        counterDisplay.innerText =
+            "Please go to Counter " +
+            counter;
 
-let lastNumber = "";
+
+        counterAmDisplay.innerText =
+            "እባክዎ ወደ ቆጣሪ " +
+            counter +
+            " ይሂዱ";
 
 
-function loadQueue(){
+        /* Voice announcement */
 
-    let data =
-        JSON.parse(
-            localStorage.getItem("currentCall")
+        speakEnglish(
+            "Number " +
+            number.replace("A","") +
+            ". Please go to counter " +
+            counter
         );
 
-    if(!data){
+    }
+);
+
+
+/* =========================
+   ENGLISH VOICE
+========================= */
+
+function speakEnglish(text){
+
+    if(
+        !("speechSynthesis" in window)
+    ){
         return;
     }
 
-    document.getElementById(
-        "number"
-    ).innerText = data.number;
 
-    document.getElementById(
-        "counter"
-    ).innerText =
-        "Counter " + data.counter;
-
-}
+    const speech =
+        new SpeechSynthesisUtterance(text);
 
 
-function english(){
+    speech.lang =
+        "en-US";
 
-    document.getElementById(
-        "now"
-    ).innerText =
-        "NOW SERVING";
+    speech.rate =
+        0.85;
 
-    document.getElementById(
-        "title"
-    ).innerText =
-        "Civil Registration & Residency Service";
+    speech.pitch =
+        1;
 
-    document.getElementById(
-        "message"
-    ).innerText =
-        "Please go to the displayed counter.";
+
+    window.speechSynthesis.cancel();
+
+    window.speechSynthesis.speak(
+        speech
+    );
 
 }
 
 
-function amharic(){
+/* =========================
+   BUTTON TEST
+========================= */
 
-    document.getElementById(
-        "now"
-    ).innerText =
-        "አሁን የሚጠራው";
+window.testEnglish =
+function(){
 
-    document.getElementById(
-        "title"
-    ).innerText =
-        "የሲቪል ምዝገባ እና የነዋሪነት አገልግሎት";
+    speakEnglish(
+        "This is the CRRSA queue system"
+    );
 
-    document.getElementById(
-        "message"
-    ).innerText =
-        "እባክዎ ወደ ተጠቀሰው ቆጣሪ ይሂዱ።";
-
-}
+};
 
 
-loadQueue();
+window.testAmharic =
+function(){
 
-setInterval(
-    loadQueue,
-    1000
-);
+    if(
+        !("speechSynthesis" in window)
+    ){
+        return;
+    }
+
+
+    const speech =
+        new SpeechSynthesisUtterance(
+            "እባክዎ ወደ ቆጣሪ ይሂዱ"
+        );
+
+
+    speech.lang =
+        "am-ET";
+
+    speech.rate =
+        0.8;
+
+
+    window.speechSynthesis.cancel();
+
+    window.speechSynthesis.speak(
+        speech
+    );
+
+};
 
 </script>
 
 </body>
-
 </html>
