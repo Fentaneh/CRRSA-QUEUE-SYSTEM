@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>CRRSA Queue System</title>
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#f2f6fa;
+    text-align:center;
+}
+
+.header{
+    background:#004d99;
+    color:white;
+    padding:30px 15px;
+}
+
+.header h1{
+    margin:0;
+    font-size:32px;
+}
+
+.header p{
+    font-size:20px;
+    margin:10px 0 0;
+}
+
+.language{
+    margin-top:15px;
+}
+
+.language button{
+    padding:10px 20px;
+    margin:5px;
+    border:none;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+.card{
+    background:white;
+    width:90%;
+    max-width:500px;
+    margin:50px auto;
+    padding:40px 20px;
+    border-radius:15px;
+    box-shadow:0 4px 15px #bbb;
+}
+
+.card h2{
+    color:#004d99;
+}
+
+.take-button{
+    background:#004d99;
+    color:white;
+    border:none;
+    padding:20px 40px;
+    font-size:24px;
+    border-radius:10px;
+    cursor:pointer;
+}
+
+.take-button:hover{
+    background:#003366;
+}
+
+#number{
+    margin-top:35px;
+    font-size:80px;
+    font-weight:bold;
+    color:#d99a00;
+}
+
+.info{
+    margin-top:25px;
+    font-size:18px;
+    color:#555;
+}
+
+.footer{
+    margin-top:80px;
+    background:#004d99;
+    color:white;
+    padding:20px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+
+    <h1>CRRSA GULELE WOREDA 03</h1>
+
+    <p>
+        Civil Registration & Residency Service
+    </p>
+
+    <div class="language">
+
+        <button onclick="setEnglish()">
+            English
+        </button>
+
+        <button onclick="setAmharic()">
+            አማርኛ
+        </button>
+
+    </div>
+
+</div>
+
+
+<div class="card">
+
+    <h2 id="title">
+        Take Your Number
+    </h2>
+
+    <p id="subtitle">
+        የተራ ቁጥር ይውሰዱ
+    </p>
+
+    <button
+        class="take-button"
+        onclick="takeNumber()">
+
+        🎫
+        <span id="buttonText">
+            Take Number
+        </span>
+
+    </button>
+
+    <div id="number"></div>
+
+    <div class="info" id="info">
+        Please wait for your number to be called.
+    </div>
+
+</div>
+
+
+<div class="footer">
+
+    © 2026 CRRSA Gulele Woreda 03
+
+</div>
+
+
+<script>
+
+let nextNumber =
+    Number(localStorage.getItem("nextNumber")) || 1;
+
+
+function takeNumber(){
+
+    let number =
+        "A" + String(nextNumber).padStart(3,"0");
+
+    document.getElementById("number").innerText =
+        number;
+
+    localStorage.setItem(
+        "nextNumber",
+        nextNumber + 1
+    );
+
+    nextNumber++;
+
+}
+
+
+function setEnglish(){
+
+    document.getElementById("title").innerText =
+        "Take Your Number";
+
+    document.getElementById("subtitle").innerText =
+        "Please take your queue number.";
+
+    document.getElementById("buttonText").innerText =
+        "Take Number";
+
+    document.getElementById("info").innerText =
+        "Please wait for your number to be called.";
+
+}
+
+
+function setAmharic(){
+
+    document.getElementById("title").innerText =
+        "የተራ ቁጥር ይውሰዱ";
+
+    document.getElementById("subtitle").innerText =
+        "እባክዎ የተራ ቁጥርዎን ይውሰዱ።";
+
+    document.getElementById("buttonText").innerText =
+        "ተራ ቁጥር ይውሰዱ";
+
+    document.getElementById("info").innerText =
+        "እባክዎ ቁጥርዎ እስኪጠራ ይጠብቁ።";
+
+}
+
+</script>
+
+</body>
+</html>
