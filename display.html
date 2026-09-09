@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>CRRSA Queue Display</title>
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#004d99;
+    color:white;
+    text-align:center;
+    min-height:100vh;
+}
+
+.header{
+    padding:30px 10px;
+}
+
+.header h1{
+    margin:0;
+    font-size:50px;
+}
+
+.header p{
+    font-size:25px;
+}
+
+.label{
+    font-size:30px;
+    margin-top:20px;
+}
+
+#number{
+    font-size:150px;
+    font-weight:bold;
+    color:#ffdd00;
+    margin:20px 0;
+}
+
+#counter{
+    font-size:60px;
+    color:#00ff99;
+    font-weight:bold;
+}
+
+#message{
+    font-size:35px;
+    margin-top:30px;
+}
+
+.language{
+    position:absolute;
+    top:15px;
+    right:15px;
+}
+
+.language button{
+    padding:10px 15px;
+    margin:3px;
+    border:0;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+.footer{
+    position:fixed;
+    bottom:10px;
+    width:100%;
+    font-size:18px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+
+    <h1>CRRSA GULELE WOREDA 03</h1>
+
+    <p id="title">
+        Civil Registration & Residency Service
+    </p>
+
+</div>
+
+
+<div class="language">
+
+    <button onclick="english()">
+        English
+    </button>
+
+    <button onclick="amharic()">
+        አማርኛ
+    </button>
+
+</div>
+
+
+<div class="label" id="now">
+    NOW SERVING
+</div>
+
+
+<div id="number">
+    -----
+</div>
+
+
+<div id="counter">
+    Counter -
+</div>
+
+
+<div id="message">
+    Please wait for your number.
+</div>
+
+
+<div class="footer">
+    CRRSA Queue System
+</div>
+
+
+<script>
+
+let lastNumber = "";
+
+
+function loadQueue(){
+
+    let data =
+        JSON.parse(
+            localStorage.getItem("currentCall")
+        );
+
+    if(!data){
+        return;
+    }
+
+    document.getElementById(
+        "number"
+    ).innerText = data.number;
+
+    document.getElementById(
+        "counter"
+    ).innerText =
+        "Counter " + data.counter;
+
+}
+
+
+function english(){
+
+    document.getElementById(
+        "now"
+    ).innerText =
+        "NOW SERVING";
+
+    document.getElementById(
+        "title"
+    ).innerText =
+        "Civil Registration & Residency Service";
+
+    document.getElementById(
+        "message"
+    ).innerText =
+        "Please go to the displayed counter.";
+
+}
+
+
+function amharic(){
+
+    document.getElementById(
+        "now"
+    ).innerText =
+        "አሁን የሚጠራው";
+
+    document.getElementById(
+        "title"
+    ).innerText =
+        "የሲቪል ምዝገባ እና የነዋሪነት አገልግሎት";
+
+    document.getElementById(
+        "message"
+    ).innerText =
+        "እባክዎ ወደ ተጠቀሰው ቆጣሪ ይሂዱ።";
+
+}
+
+
+loadQueue();
+
+setInterval(
+    loadQueue,
+    1000
+);
+
+</script>
+
+</body>
+
+</html>
