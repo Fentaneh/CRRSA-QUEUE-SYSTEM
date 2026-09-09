@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +7,6 @@
 <title>CRRSA - Now Serving</title>
 
 <style>
-
 *{
     box-sizing:border-box;
 }
@@ -28,7 +26,7 @@ header{
 
 header h1{
     margin:0;
-    font-size:50px;
+    font-size:55px;
 }
 
 header p{
@@ -46,16 +44,16 @@ header p{
 
 .title{
     font-size:45px;
-    margin-bottom:20px;
+    font-weight:bold;
 }
 
 .amharic{
     font-size:30px;
-    margin-bottom:25px;
+    margin:10px 0 25px;
 }
 
 #number{
-    font-size:150px;
+    font-size:160px;
     font-weight:bold;
     color:#ffd700;
     margin:10px;
@@ -63,6 +61,7 @@ header p{
 
 #counter{
     font-size:50px;
+    font-weight:bold;
     margin:15px;
 }
 
@@ -70,15 +69,15 @@ header p{
     font-size:32px;
 }
 
-.status{
-    font-size:25px;
+#status{
+    font-size:24px;
     margin-top:25px;
 }
 
 button{
     padding:15px 25px;
-    margin:8px;
-    border:none;
+    margin:20px 8px;
+    border:0;
     border-radius:8px;
     background:#004d99;
     color:white;
@@ -89,27 +88,16 @@ button{
 button:hover{
     background:#0066cc;
 }
-
 </style>
 </head>
-
 
 <body>
 
 <header>
-
     <h1>CRRSA</h1>
-
-    <p>
-        Queue Management System
-    </p>
-
-    <p>
-        የተራ አስተዳደር ስርዓት
-    </p>
-
+    <p>Queue Management System</p>
+    <p>የተራ አስተዳደር ስርዓት</p>
 </header>
-
 
 <div class="main">
 
@@ -121,41 +109,27 @@ button:hover{
         አሁን የሚጠራው
     </div>
 
-
-    <div id="number">
-        ---
-    </div>
-
+    <div id="number">---</div>
 
     <div id="counter">
-        Please wait
+        Please Wait
     </div>
 
     <div id="counterAm">
         እባክዎ ይጠብቁ
     </div>
 
-
-    <div class="status">
+    <div id="status">
         Please go to the displayed counter
     </div>
 
-    <div class="status">
-        እባክዎ ወደተጠቀሰው ቆጣሪ ይሂዱ
-    </div>
+    <button id="englishBtn">
+        🔊 English
+    </button>
 
-
-    <div>
-
-        <button onclick="testEnglish()">
-            🔊 English
-        </button>
-
-        <button onclick="testAmharic()">
-            🔊 አማርኛ
-        </button>
-
-    </div>
+    <button id="amharicBtn">
+        🔊 አማርኛ
+    </button>
 
 </div>
 
@@ -178,9 +152,24 @@ const counterDisplay =
 const counterAmDisplay =
     document.getElementById("counterAm");
 
+const statusDisplay =
+    document.getElementById("status");
+
+const englishBtn =
+    document.getElementById("englishBtn");
+
+const amharicBtn =
+    document.getElementById("amharicBtn");
+
+
+let currentNumber = "";
+let currentCounter = "";
+
+let lastAnnouncement = "";
+
 
 /* =========================
-   FIREBASE LIVE DATA
+   FIREBASE LIVE DISPLAY
 ========================= */
 
 onValue(
@@ -190,55 +179,88 @@ onValue(
         const current =
             snapshot.val();
 
-
         if(
             !current ||
             !current.number
         ){
 
+            currentNumber = "";
+            currentCounter = "";
+
             numberDisplay.innerText =
                 "---";
 
             counterDisplay.innerText =
-                "Please wait";
+                "Please Wait";
 
             counterAmDisplay.innerText =
                 "እባክዎ ይጠብቁ";
+
+            statusDisplay.innerText =
+                "Please go to the displayed counter";
 
             return;
         }
 
 
-        const number =
+        currentNumber =
             current.number;
 
-        const counter =
+        currentCounter =
             current.counter;
 
 
         numberDisplay.innerText =
-            number;
+            currentNumber;
 
 
         counterDisplay.innerText =
             "Please go to Counter " +
-            counter;
+            currentCounter;
 
 
         counterAmDisplay.innerText =
             "እባክዎ ወደ ቆጣሪ " +
-            counter +
+            currentCounter +
             " ይሂዱ";
 
 
-        /* Voice announcement */
+        statusDisplay.innerText =
+            "Please go to the displayed counter";
 
-        speakEnglish(
-            "Number " +
-            number.replace("A","") +
-            ". Please go to counter " +
-            counter
-        );
+
+        /*
+         * Announce only when the number changes.
+         */
+
+        const announcement =
+            currentNumber +
+            "-" +
+            currentCounter;
+
+
+        if(
+            announcement !== lastAnnouncement
+        ){
+
+            lastAnnouncement =
+                announcement;
+
+            speakEnglish(
+                "Number " +
+                currentNumber.replace("A","") +
+                ". Please go to counter " +
+                currentCounter
+            );
+        }
+
+    },
+    (error) => {
+
+        console.error(error);
+
+        statusDisplay.innerText =
+            "Firebase connection error";
 
     }
 );
@@ -256,10 +278,8 @@ function speakEnglish(text){
         return;
     }
 
-
     const speech =
         new SpeechSynthesisUtterance(text);
-
 
     speech.lang =
         "en-US";
@@ -270,32 +290,26 @@ function speakEnglish(text){
     speech.pitch =
         1;
 
-
     window.speechSynthesis.cancel();
 
     window.speechSynthesis.speak(
         speech
     );
-
 }
 
 
 /* =========================
-   BUTTON TEST
+   AMHARIC VOICE
 ========================= */
 
-window.testEnglish =
-function(){
+function speakAmharic(){
 
-    speakEnglish(
-        "This is the CRRSA queue system"
-    );
-
-};
-
-
-window.testAmharic =
-function(){
+    if(
+        !currentNumber ||
+        !currentCounter
+    ){
+        return;
+    }
 
     if(
         !("speechSynthesis" in window)
@@ -303,12 +317,16 @@ function(){
         return;
     }
 
+    const text =
+        "ቁጥር " +
+        currentNumber.replace("A","") +
+        " እባክዎ ወደ ቆጣሪ " +
+        currentCounter +
+        " ይሂዱ";
+
 
     const speech =
-        new SpeechSynthesisUtterance(
-            "እባክዎ ወደ ቆጣሪ ይሂዱ"
-        );
-
+        new SpeechSynthesisUtterance(text);
 
     speech.lang =
         "am-ET";
@@ -316,14 +334,41 @@ function(){
     speech.rate =
         0.8;
 
-
     window.speechSynthesis.cancel();
 
     window.speechSynthesis.speak(
         speech
     );
+}
 
-};
+
+/* =========================
+   BUTTONS
+========================= */
+
+englishBtn.addEventListener(
+    "click",
+    () => {
+
+        speakEnglish(
+            "Number " +
+            currentNumber.replace("A","") +
+            ". Please go to counter " +
+            currentCounter
+        );
+
+    }
+);
+
+
+amharicBtn.addEventListener(
+    "click",
+    () => {
+
+        speakAmharic();
+
+    }
+);
 
 </script>
 
