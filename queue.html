@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>CRRSA Queue</title>
+
+<style>
+body{
+    margin:0;
+    background:#004d99;
+    color:white;
+    font-family:Arial,sans-serif;
+    text-align:center;
+}
+
+h1{
+    font-size:45px;
+    margin-top:40px;
+}
+
+#number{
+    font-size:130px;
+    font-weight:bold;
+    color:#ffdd00;
+    margin:30px;
+}
+
+#counter{
+    font-size:55px;
+    color:#00ff99;
+}
+
+.message{
+    font-size:30px;
+    margin-top:30px;
+}
+
+button{
+    padding:15px 30px;
+    font-size:20px;
+    border:0;
+    border-radius:8px;
+    cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<h1 id="title">NOW SERVING</h1>
+
+<div id="number">-----</div>
+
+<div id="counter">Counter -</div>
+
+<div class="message" id="message">
+Please wait for your number.
+</div>
+
+<br><br>
+
+<button onclick="english()">English</button>
+<button onclick="amharic()">አማርኛ</button>
+
+<script>
+
+function loadQueue(){
+
+    let current =
+        JSON.parse(
+            localStorage.getItem("currentCall")
+        );
+
+    if(!current){
+        return;
+    }
+
+    document.getElementById("number").innerText =
+        current.number;
+
+    document.getElementById("counter").innerText =
+        "Counter " + current.counter;
+}
+
+function english(){
+
+    document.getElementById("title").innerText =
+        "NOW SERVING";
+
+    document.getElementById("message").innerText =
+        "Please go to the displayed counter.";
+}
+
+function amharic(){
+
+    document.getElementById("title").innerText =
+        "አሁን የሚጠራው";
+
+    document.getElementById("message").innerText =
+        "እባክዎ ወደ ተጠቀሰው ቆጣሪ ይሂዱ።";
+}
+
+loadQueue();
+
+setInterval(loadQueue,1000);
+
+</script>
+
+</body>
+</html>
