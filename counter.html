@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>CRRSA Counter</title>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#eef3f8;
+    text-align:center;
+}
+
+.header{
+    background:#004d99;
+    color:white;
+    padding:25px;
+}
+
+.header h1{
+    margin:0;
+}
+
+.card{
+    background:white;
+    width:90%;
+    max-width:600px;
+    margin:40px auto;
+    padding:30px;
+    border-radius:15px;
+    box-shadow:0 4px 15px #bbb;
+}
+
+#current{
+    font-size:75px;
+    font-weight:bold;
+    color:#d99a00;
+    margin:25px;
+}
+
+#status{
+    font-size:22px;
+    margin:20px;
+}
+
+button{
+    padding:18px 35px;
+    margin:8px;
+    border:0;
+    border-radius:8px;
+    font-size:22px;
+    cursor:pointer;
+}
+
+.next{
+    background:#008000;
+    color:white;
+}
+
+.recall{
+    background:#004d99;
+    color:white;
+}
+
+.reset{
+    background:#cc0000;
+    color:white;
+}
+
+.counter{
+    margin:20px;
+    font-size:22px;
+}
+
+select{
+    padding:12px;
+    font-size:20px;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+
+<h1>CRRSA GULELE WOREDA 03</h1>
+
+<p>Counter Calling System</p>
+
+</div>
+
+
+<div class="card">
+
+<h2>Counter Staff</h2>
+
+<div class="counter">
+
+<label>Counter:</label>
+
+<select id="counter">
+
+<option value="1">Counter 1</option>
+<option value="2">Counter 2</option>
+<option value="3">Counter 3</option>
+<option value="4">Counter 4</option>
+
+</select>
+
+</div>
+
+
+<div id="current">
+-----
+</div>
+
+
+<div id="status">
+Waiting...
+</div>
+
+
+<button
+class="next"
+onclick="nextCustomer()">
+
+➡️ NEXT
+<br>
+ቀጣይ
+
+</button>
+
+
+<button
+class="recall"
+onclick="recallCustomer()">
+
+🔊 RECALL
+<br>
+እንደገና ጥራ
+
+</button>
+
+
+<button
+class="reset"
+onclick="resetQueue()">
+
+RESET
+<br>
+እንደገና ጀምር
+
+</button>
+
+</div>
+
+
+<script>
+
+let nextNumber =
+Number(localStorage.getItem("nextNumber")) || 1;
+
+
+let currentNumber =
+Number(localStorage.getItem("currentNumber")) || 0;
+
+
+function nextCustomer(){
+
+    if(nextNumber <= currentNumber){
+        nextNumber = currentNumber + 1;
+    }
+
+    currentNumber = nextNumber;
+
+    let number =
+        "A" + String(currentNumber).padStart(3,"0");
+
+    let counter =
+        document.getElementById("counter").value;
+
+    document.getElementById("current").innerText =
+        number;
+
+    document.getElementById("status").innerText =
+        "Calling " + number +
+        " → Counter " + counter;
+
+    localStorage.setItem(
+        "currentNumber",
+        currentNumber
+    );
+
+    localStorage.setItem(
+        "currentCall",
+        JSON.stringify({
+            number:number,
+            counter:counter
+        })
+    );
+
+    speak(number,counter);
+
+    nextNumber++;
+
+    localStorage.setItem(
+        "nextNumber",
+        nextNumber
+    );
+}
+
+
+function recallCustomer(){
+
+    let data =
+        JSON.parse(
+            localStorage.getItem("currentCall")
+        );
+
+    if(!data){
+        alert("No customer to recall.");
+        return;
+    }
+
+    speak(
+        data.number,
+        data.counter
+    );
+}
+
+
+function speak(number,counter){
+
+    speechSynthesis.cancel();
+
+    let speech =
+        new SpeechSynthesisUtterance();
+
+    speech.lang = "en-US";
+
+    speech.rate = 0.85;
+
+    speech.pitch = 1;
+
+    speech.text =
+        "Number " +
+        number +
+        ". Please go to counter " +
+        counter;
+
+    speechSynthesis.speak(speech);
+}
+
+
+function resetQueue(){
+
+    if(!confirm(
+        "Reset the queue?"
+    )){
+        return;
+    }
+
+    nextNumber = 1;
+    currentNumber = 0;
+
+    localStorage.setItem(
+        "nextNumber",
+        1
+    );
+
+    localStorage.setItem(
+        "currentNumber",
+        0
+    );
+
+    localStorage.removeItem(
+        "currentCall"
+    );
+
+    document.getElementById(
+        "current"
+    ).innerText = "-----";
+
+    document.getElementById(
+        "status"
+    ).innerText = "Queue Reset";
+}
+
+</script>
+
+</body>
+</html>
